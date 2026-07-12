@@ -16,7 +16,7 @@ class UserModel {
       'id': id,
       'name': name,
       'email': email,
-      'createdAt': createdAt.toIso8601String(), // 👈 convert DateTime
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
@@ -25,7 +25,7 @@ class UserModel {
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']), // 👈 parse lại
+      createdAt: DateTime.parse(json['createdAt']),
     );
   }
 }

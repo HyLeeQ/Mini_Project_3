@@ -34,10 +34,11 @@ class CategoryModel {
 
       /// String -> enum
       type: CategoryType.values.firstWhere(
-            (e) => e.name == json['type'],
+        (e) => e.name == json['type'],
         orElse: () => CategoryType.expense,
       ),
     );
   }
 }
+
 enum CategoryType { income, expense }

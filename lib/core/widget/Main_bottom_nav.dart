@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../data/model/UserModel.dart';
 import '../../features/page/AIPage/AIPage.dart';
-import '../../features/page/AddPage/AddPage.dart';
 import '../../features/page/AnalyticsPage/AnalyticsPage.dart';
 import '../../features/page/HomePage/HomePage.dart';
+import '../../features/page/HomePage/bloc/transaction_bloc/transaction_bloc.dart';
+import '../../features/page/HomePage/bloc/transaction_bloc/transaction_event.dart';
+import '../../features/page/HomePage/bloc/wallet_bloc/wallet_bloc.dart';
+import '../../features/page/HomePage/bloc/wallet_bloc/wallet_event.dart';
 import '../../features/page/SettingsPage/SettingsPage.dart';
+import '../../features/page/add_transaction/AddPage.dart';
+import '../../features/page/add_transaction/models/sample_data.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
+  final UserModel user;
 
-  const MainNavigationScreen({super.key, this.initialIndex = 0});
+  const MainNavigationScreen({super.key,required this.user,  this.initialIndex = 0});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -20,6 +28,8 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   List<Widget> _pages = [];
+  late WalletBloc _walletBloc;
+  late TransactionBloc _transactionBloc;
 
   // ── Design tokens (khớp Login / Register) ─────────────────────
   static const _bg      = Color(0xFF0A0A0F);
@@ -42,19 +52,58 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    _walletBloc = WalletBloc()..add(LoadWallets(widget.user.id));
+    _transactionBloc = TransactionBloc()..add(LoadRecentTransactions(widget.user.id));
     _loadPages();
   }
 
   void _loadPages() {
     setState(() {
       _pages = [
-        const HomePage(),
-        const AnalyticsPage(),
-        const AddPage(),
-        const AIPage(),
-        const SettingsPage(),
+        MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: _walletBloc),
+            BlocProvider.value(value: _transactionBloc),
+          ],
+          child: HomePage(
+            user: widget.user,
+            categories: SampleData.categories,
+          ),
+        ),
+        BlocProvider.value(
+          value: _transactionBloc,
+          child: AnalyticsPage(
+            categories: SampleData.categories,
+          ),
+        ),
+        MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: _walletBloc),
+            BlocProvider.value(value: _transactionBloc),
+          ],
+          child: AddPage(
+            userId: widget.user.id,
+            categories: SampleData.categories,
+          ),
+        ),
+        MultiBlocProvider(providers: [
+          BlocProvider.value(value: _walletBloc),
+          BlocProvider.value(value: _transactionBloc),
+        ], child: AIPage(user: widget.user,),),
+        MultiBlocProvider(providers: [
+          BlocProvider.value(value: _walletBloc),
+          BlocProvider.value(value: _transactionBloc),
+        ], child: SettingsPage(user: widget.user,),),
       ];
     });
+  }
+  @override
+
+
+  void dispose() {
+    _walletBloc.close();
+    _transactionBloc.close();
+    super.dispose();
   }
 
   void _onTap(int index) {
