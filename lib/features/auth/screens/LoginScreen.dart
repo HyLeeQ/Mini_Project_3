@@ -1,6 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_tracker/core/widget/Main_bottom_nav.dart';
+import 'package:expense_tracker/data/model/UserModel.dart';
+import 'package:expense_tracker/data/repositories/prefs/UserPrefsService.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../core/helper/aleart.dart';
 import 'RegisterScreen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -61,10 +67,53 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() =>
             _isLoading = true
     );
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // await Future.delayed(const Duration(milliseconds: 1500));
+    await signIn();
     setState(() =>
        _isLoading = false
     );
+  }
+  Future<void> signIn() async{
+    try{
+      final query = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('email', isEqualTo: _emailController.text)
+          .limit(1)
+          .get();
+      if (query.docs.isEmpty) {
+        displayMessageToUser(context, 'Không tìm thấy tài khoản này', isSuccess: false);
+        return;
+      }else{
+        await FirebaseAuth.instance.signInWithEmailAndPassword(email: _emailController.text, password: _passwordController.text);
+        final data = query.docs.first.data();
+        final user = UserModel.fromJson(data);
+
+        await UserPrefsService.saveUser(user);
+        Navigator.push(context, PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => MainNavigationScreen(user: user,),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);  // Bắt đầu bên phải màn hình
+            const end = Offset.zero;          // Kết thúc ở vị trí hiện tại
+            final tween = Tween(begin: begin, end: end);
+            final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.ease);
+
+            return SlideTransition(
+              position: tween.animate(curvedAnimation),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 1000),  // thời gian chuyển cảnh
+        ));
+      }
+    }on FirebaseAuthException catch (e) {
+      if (context.mounted) {
+        displayMessageToUser(context, 'Tài khoản hoặc mật khẩu không đúng', isSuccess: false);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        displayMessageToUser(context, 'Có lỗi xảy ra: $e', isSuccess: false);
+      }
+    }
   }
 
   @override

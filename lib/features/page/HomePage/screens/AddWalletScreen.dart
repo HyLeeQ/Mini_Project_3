@@ -4,75 +4,86 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/format/VndInputFormatter.dart';
+import '../../../../data/firebase/WalletStorage.dart';
 import '../../../../data/model/WalletModel.dart';
-
-
 
 enum _WalletType { cash, bank }
 
 class AddWalletScreen extends StatefulWidget {
-  const AddWalletScreen({super.key});
+  final String userId;
+  const AddWalletScreen({super.key, required this.userId});
 
   @override
   State<AddWalletScreen> createState() => _AddWalletScreenState();
 }
 
-class _AddWalletScreenState extends State<AddWalletScreen>
-    with SingleTickerProviderStateMixin {
+class _AddWalletScreenState extends State<AddWalletScreen> with SingleTickerProviderStateMixin {
+  final WalletStorage _walletStorage = WalletStorage();
   // ── Design tokens ──────────────────────────────────────────────
-  static const _bg            = Color(0xFF0A0A0F);
-  static const _surface       = Color(0xFF13131A);
-  static const _card          = Color(0xFF1C1C26);
-  static const _gold          = Color(0xFFD4A843);
-  static const _goldDeep      = Color(0xFF9A721C);
-  static const _green         = Color(0xFF2ECC8A);
-  static const _textPrimary   = Color(0xFFF2F0E8);
+  static const _bg = Color(0xFF0A0A0F);
+  static const _surface = Color(0xFF13131A);
+  static const _card = Color(0xFF1C1C26);
+  static const _gold = Color(0xFFD4A843);
+  static const _goldDeep = Color(0xFF9A721C);
+  static const _green = Color(0xFF2ECC8A);
+  static const _textPrimary = Color(0xFFF2F0E8);
   static const _textSecondary = Color(0xFF7A7A8C);
-  static const _border        = Color(0xFF2A2A38);
-  static const _error         = Color(0xFFE05555);
+  static const _border = Color(0xFF2A2A38);
+  static const _error = Color(0xFFE05555);
 
   // ── Controllers ────────────────────────────────────────────────
-  final _formKey        = GlobalKey<FormState>();
-  final _bankNameCtrl   = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _bankNameCtrl = TextEditingController();
   final _cardNumberCtrl = TextEditingController();
-  final _balanceCtrl    = TextEditingController();
+  final _balanceCtrl = TextEditingController();
 
   late final AnimationController _entryCtrl;
-  late final Animation<double>   _fadeAnim;
-  late final Animation<Offset>   _slideAnim;
+  late final Animation<double> _fadeAnim;
+  late final Animation<Offset> _slideAnim;
 
   // ── State ──────────────────────────────────────────────────────
-  _WalletType _walletType      = _WalletType.cash;
-  bool        _isLoading       = false;
-  bool        _isDefault       = false;
-  String      _selectedColorHex = '#2ECC8A'; // mặc định xanh cho tiền mặt
+  _WalletType _walletType = _WalletType.cash;
+  bool _isLoading = false;
+  bool _isDefault = false;
+  String _selectedColorHex = '#2ECC8A'; // mặc định xanh cho tiền mặt
 
   // ── Preset colors ──────────────────────────────────────────────
   static const _colors = [
-    '#2ECC8A', '#D4A843', '#5B8CFF', '#E05555',
-    '#B05BFF', '#FF8C42', '#00C9B1', '#FF6B9D',
-    '#A8E063', '#F7C59F', '#7B9EA6', '#C9ADA7',
+    '#2ECC8A',
+    '#D4A843',
+    '#5B8CFF',
+    '#E05555',
+    '#B05BFF',
+    '#FF8C42',
+    '#00C9B1',
+    '#FF6B9D',
+    '#A8E063',
+    '#F7C59F',
+    '#7B9EA6',
+    '#C9ADA7',
   ];
 
   // ── Ngân hàng phổ biến ─────────────────────────────────────────
   static const _popularBanks = [
-    ('Vietcombank',  '🏦'),
-    ('Techcombank',  '💳'),
-    ('BIDV',         '🏦'),
-    ('MB Bank',      '💎'),
-    ('VPBank',       '📊'),
-    ('Agribank',     '🌾'),
-    ('ACB',          '🎯'),
-    ('TPBank',       '📱'),
+    ('Vietcombank', '🏦'),
+    ('Techcombank', '💳'),
+    ('BIDV', '🏦'),
+    ('MB Bank', '💎'),
+    ('VPBank', '📊'),
+    ('Agribank', '🌾'),
+    ('ACB', '🎯'),
+    ('TPBank', '📱'),
   ];
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
     _entryCtrl = AnimationController(
       vsync: this,
@@ -85,10 +96,7 @@ class _AddWalletScreenState extends State<AddWalletScreen>
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryCtrl,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
   }
 
@@ -125,11 +133,10 @@ class _AddWalletScreenState extends State<AddWalletScreen>
       double.tryParse(
         _balanceCtrl.text.replaceAll('.', '').replaceAll(',', ''),
       ) ??
-          0.0;
+      0.0;
 
   String _fmtBalance(double v) {
     if (v == 0) return '0 ₫';
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M ₫';
     return '${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₫';
   }
 
@@ -152,27 +159,8 @@ class _AddWalletScreenState extends State<AddWalletScreen>
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Chưa đăng nhập');
 
-      final name = _isCash
-          ? 'Tiền mặt'
-          : _bankNameCtrl.text.trim();
-
-      final docRef = FirebaseFirestore.instance.collection('Wallets').doc();
-      final wallet = WalletModel(
-        id:        docRef.id,
-        userId:    user.uid,
-        name:      name,
-        icon:      _walletIcon,
-        colorHex:  _selectedColorHex,
-        balance:   _balance,
-      );
-
-      // Lưu thêm số thẻ nếu là bank (custom field ngoài model)
-      final data = wallet.toJson();
-      if (!_isCash && _cardNumberCtrl.text.trim().isNotEmpty) {
-        data['cardNumber'] = _cardNumberCtrl.text.trim();
-      }
-
-      await docRef.set(data);
+      final name = _isCash ? 'Tiền mặt' : _bankNameCtrl.text.trim();
+      final wallet = await _walletStorage.addWallet(widget.userId, name, _walletIcon, _selectedColorHex, _balance, _isCash ? WalletType.cash : WalletType.bank, _isCash ? null : _cardNumberCtrl.text);
 
       if (!mounted) return;
       Navigator.pop(context, wallet);
@@ -187,11 +175,15 @@ class _AddWalletScreenState extends State<AddWalletScreen>
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg,
-            style: TextStyle(fontSize: 13.sp, color: _textPrimary)),
+        content: Text(
+          msg,
+          style: TextStyle(fontSize: 13.sp, color: _textPrimary),
+        ),
         backgroundColor: _error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
         margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
       ),
     );
@@ -205,15 +197,19 @@ class _AddWalletScreenState extends State<AddWalletScreen>
         children: [
           // Background orb
           Positioned(
-            top: -60.h, right: -60.w,
+            top: -60.h,
+            right: -60.w,
             child: Container(
-              width: 240.w, height: 240.w,
+              width: 240.w,
+              height: 240.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  _parseColor(_selectedColorHex).withOpacity(0.12),
-                  Colors.transparent,
-                ]),
+                gradient: RadialGradient(
+                  colors: [
+                    _parseColor(_selectedColorHex).withOpacity(0.12),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
@@ -297,27 +293,37 @@ class _AddWalletScreenState extends State<AddWalletScreen>
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              width: 40.w, height: 40.w,
+              width: 40.w,
+              height: 40.w,
               decoration: BoxDecoration(
                 color: _surface,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: _border, width: 1.w),
               ),
-              child: Icon(Icons.arrow_back_ios_new_rounded,
-                  color: _textPrimary, size: 16.sp),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: _textPrimary,
+                size: 16.sp,
+              ),
             ),
           ),
           SizedBox(width: 16.w),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Thêm ví mới',
-                  style: TextStyle(
-                    fontSize: 18.sp, fontWeight: FontWeight.w700,
-                    color: _textPrimary, letterSpacing: -0.3,
-                  )),
-              Text('Chọn loại ví phù hợp',
-                  style: TextStyle(fontSize: 12.sp, color: _textSecondary)),
+              Text(
+                'Thêm ví mới',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              Text(
+                'Chọn loại ví phù hợp',
+                style: TextStyle(fontSize: 12.sp, color: _textSecondary),
+              ),
             ],
           ),
         ],
@@ -370,10 +376,14 @@ class _AddWalletScreenState extends State<AddWalletScreen>
           curve: Curves.easeOut,
           height: 52.h,
           decoration: BoxDecoration(
-            color: isSelected ? accentColor.withOpacity(0.12) : Colors.transparent,
+            color: isSelected
+                ? accentColor.withOpacity(0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
-              color: isSelected ? accentColor.withOpacity(0.4) : Colors.transparent,
+              color: isSelected
+                  ? accentColor.withOpacity(0.4)
+                  : Colors.transparent,
               width: 1.w,
             ),
           ),
@@ -418,17 +428,16 @@ class _AddWalletScreenState extends State<AddWalletScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(
-          color: accent.withOpacity(0.5),
-          width: 1.5.w,
-        ),
+        border: Border.all(color: accent.withOpacity(0.5), width: 1.5.w),
       ),
       child: Stack(
         children: [
           Positioned(
-            top: -24.h, right: -24.w,
+            top: -24.h,
+            right: -24.w,
             child: Container(
-              width: 130.w, height: 130.w,
+              width: 130.w,
+              height: 130.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: accent.withOpacity(0.07),
@@ -436,9 +445,11 @@ class _AddWalletScreenState extends State<AddWalletScreen>
             ),
           ),
           Positioned(
-            bottom: -28.h, left: -16.w,
+            bottom: -28.h,
+            left: -16.w,
             child: Container(
-              width: 90.w, height: 90.w,
+              width: 90.w,
+              height: 90.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: accent.withOpacity(0.04),
@@ -455,14 +466,17 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                 Row(
                   children: [
                     Container(
-                      width: 36.w, height: 36.w,
+                      width: 36.w,
+                      height: 36.w,
                       decoration: BoxDecoration(
                         color: accent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Center(
-                        child: Text(_walletIcon,
-                            style: TextStyle(fontSize: 18.sp)),
+                        child: Text(
+                          _walletIcon,
+                          style: TextStyle(fontSize: 18.sp),
+                        ),
                       ),
                     ),
                     SizedBox(width: 10.w),
@@ -480,7 +494,9 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                     // Type badge
                     Container(
                       padding: EdgeInsets.symmetric(
-                          horizontal: 8.w, vertical: 3.h),
+                        horizontal: 8.w,
+                        vertical: 3.h,
+                      ),
                       decoration: BoxDecoration(
                         color: accent.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(6.r),
@@ -500,14 +516,18 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                 const Spacer(),
 
                 // Balance
-                Text('Số dư',
-                    style: TextStyle(fontSize: 11.sp, color: _textSecondary)),
+                Text(
+                  'Số dư',
+                  style: TextStyle(fontSize: 11.sp, color: _textSecondary),
+                ),
                 SizedBox(height: 3.h),
                 Text(
                   _fmtBalance(_balance),
                   style: TextStyle(
-                    fontSize: 20.sp, fontWeight: FontWeight.w700,
-                    color: _textPrimary, letterSpacing: -0.5,
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
+                    letterSpacing: -0.5,
                   ),
                 ),
 
@@ -528,17 +548,21 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                   SizedBox(height: 5.h),
                   Container(
                     padding: EdgeInsets.symmetric(
-                        horizontal: 8.w, vertical: 2.h),
+                      horizontal: 8.w,
+                      vertical: 2.h,
+                    ),
                     decoration: BoxDecoration(
                       color: accent.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(5.r),
                     ),
-                    child: Text('Ví mặc định',
-                        style: TextStyle(
-                          fontSize: 9.sp,
-                          color: accent,
-                          fontWeight: FontWeight.w600,
-                        )),
+                    child: Text(
+                      'Ví mặc định',
+                      style: TextStyle(
+                        fontSize: 9.sp,
+                        color: accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -560,8 +584,7 @@ class _AddWalletScreenState extends State<AddWalletScreen>
           child: TextFormField(
             controller: _balanceCtrl,
             onChanged: (_) => setState(() {}),
-            keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
             ],
@@ -577,12 +600,14 @@ class _AddWalletScreenState extends State<AddWalletScreen>
               icon: Icons.account_balance_wallet_outlined,
               suffix: Padding(
                 padding: EdgeInsets.only(right: 16.w),
-                child: Text('₫',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      color: _green,
-                      fontWeight: FontWeight.w700,
-                    )),
+                child: Text(
+                  '₫',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: _green,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),
@@ -633,24 +658,21 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       padding: EdgeInsets.symmetric(
-                          horizontal: 10.w, vertical: 6.h),
+                        horizontal: 10.w,
+                        vertical: 6.h,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? _gold.withOpacity(0.12)
-                            : _surface,
+                        color: isSelected ? _gold.withOpacity(0.12) : _surface,
                         borderRadius: BorderRadius.circular(8.r),
                         border: Border.all(
-                          color: isSelected
-                              ? _gold.withOpacity(0.4)
-                              : _border,
+                          color: isSelected ? _gold.withOpacity(0.4) : _border,
                           width: 1.w,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(bank.$2,
-                              style: TextStyle(fontSize: 13.sp)),
+                          Text(bank.$2, style: TextStyle(fontSize: 13.sp)),
                           SizedBox(width: 5.w),
                           Text(
                             bank.$1,
@@ -699,16 +721,17 @@ class _AddWalletScreenState extends State<AddWalletScreen>
         ),
 
         SizedBox(height: 20.h),
-// so du
+        // so du
         _buildSection(
           label: 'Số dư hiện có',
           child: TextFormField(
             controller: _balanceCtrl,
             onChanged: (_) => setState(() {}),
-            keyboardType: TextInputType.number, // ← chỉ số, không cần decimal
+            keyboardType: TextInputType.number,
+            // ← chỉ số, không cần decimal
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly, // ← chỉ nhận chữ số
-              VndInputFormatter(),                    // ← tự format 1.000.000
+              VndInputFormatter(), // ← tự format 1.000.000
             ],
             style: TextStyle(color: _textPrimary, fontSize: 15.sp),
             validator: (v) {
@@ -721,9 +744,14 @@ class _AddWalletScreenState extends State<AddWalletScreen>
               icon: Icons.account_balance_wallet_outlined,
               suffix: Padding(
                 padding: EdgeInsets.only(right: 16.w),
-                child: Text('₫', style: TextStyle(
-                  fontSize: 16.sp, color: _gold, fontWeight: FontWeight.w700,
-                )),
+                child: Text(
+                  '₫',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: _gold,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),
@@ -741,7 +769,7 @@ class _AddWalletScreenState extends State<AddWalletScreen>
         runSpacing: 10.h,
         children: _colors.map((hex) {
           final isSelected = _selectedColorHex == hex;
-          final color      = _parseColor(hex);
+          final color = _parseColor(hex);
           return GestureDetector(
             onTap: () => setState(() => _selectedColorHex = hex),
             child: AnimatedContainer(
@@ -756,15 +784,11 @@ class _AddWalletScreenState extends State<AddWalletScreen>
                   width: 2.5.w,
                 ),
                 boxShadow: isSelected
-                    ? [BoxShadow(
-                  color: color.withOpacity(0.5),
-                  blurRadius: 8,
-                )]
+                    ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)]
                     : null,
               ),
               child: isSelected
-                  ? Icon(Icons.check_rounded,
-                  color: Colors.white, size: 16.sp)
+                  ? Icon(Icons.check_rounded, color: Colors.white, size: 16.sp)
                   : null,
             ),
           );
@@ -772,7 +796,6 @@ class _AddWalletScreenState extends State<AddWalletScreen>
       ),
     );
   }
-
 
   // ── Save button ─────────────────────────────────────────────────
   Widget _buildSaveButton() {
@@ -784,40 +807,42 @@ class _AddWalletScreenState extends State<AddWalletScreen>
         onPressed: _isLoading ? null : _saveWallet,
         style: ElevatedButton.styleFrom(
           backgroundColor: _isCash ? _green : _gold,
-          disabledBackgroundColor:
-          (_isCash ? _green : _gold).withOpacity(0.3),
+          disabledBackgroundColor: (_isCash ? _green : _gold).withOpacity(0.3),
           foregroundColor: const Color(0xFF0A1A0A),
           elevation: 0,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r)),
+            borderRadius: BorderRadius.circular(16.r),
+          ),
         ),
         child: _isLoading
             ? SizedBox(
-          width: 22.w, height: 22.w,
-          child: const CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: Color(0xFF0A1A0A)),
-        )
+                width: 22.w,
+                height: 22.w,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Color(0xFF0A1A0A),
+                ),
+              )
             : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _isCash
-                  ? Icons.account_balance_wallet_rounded
-                  : Icons.credit_card_rounded,
-              size: 20.sp,
-            ),
-            SizedBox(width: 8.w),
-            Text(
-              _isCash ? 'Tạo ví tiền mặt' : 'Thêm thẻ ngân hàng',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isCash
+                        ? Icons.account_balance_wallet_rounded
+                        : Icons.credit_card_rounded,
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    _isCash ? 'Tạo ví tiền mặt' : 'Thêm thẻ ngân hàng',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -827,11 +852,15 @@ class _AddWalletScreenState extends State<AddWalletScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-              fontSize: 13.sp, fontWeight: FontWeight.w600,
-              color: _textSecondary, letterSpacing: 0.3,
-            )),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w600,
+            color: _textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
         SizedBox(height: 10.h),
         child,
       ],
@@ -851,8 +880,7 @@ class _AddWalletScreenState extends State<AddWalletScreen>
       suffixIcon: suffix,
       filled: true,
       fillColor: _surface,
-      contentPadding:
-      EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14.r),
         borderSide: BorderSide(color: _border, width: 1.w),
@@ -885,9 +913,9 @@ class _AddWalletScreenState extends State<AddWalletScreen>
 class _CardNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final digits = newValue.text.replaceAll(' ', '');
     final buffer = StringBuffer();
     for (int i = 0; i < digits.length; i++) {

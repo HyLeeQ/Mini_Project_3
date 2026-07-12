@@ -1,14 +1,13 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
+    id("com.google.gms.google-services") // Phải nằm dưới android application
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.expense_tracker"
+    // Sửa 36 thành 35 để ổn định hơn
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 
@@ -24,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.expense_tracker"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -40,7 +39,10 @@ android {
 flutter {
     source = "../.."
 }
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    implementation("com.google.firebase:firebase-messaging:23.4.1")
+
+
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
 }

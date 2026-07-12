@@ -1,20 +1,44 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'data/repositories/services/PermissionService.dart';
+import 'data/repositories/services/notification.dart';
 import 'features/intro/splashscreen.dart';
 import 'firebase_options.dart'; // file được gen bởi flutterfire configure
 
 void main() async {
-  // ✅ Bắt buộc phải có trước mọi thứ
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+  );
 
-  // ✅ Khởi tạo Firebase
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await PermissionService.requestAllPermissions();
 
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await NotificationService().init();
+  print(await NotificationService().getToken());
   runApp(const MyApp());
+}
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
 }
 
 class MyApp extends StatelessWidget {
@@ -23,7 +47,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      // ✅ Kích thước máy đang debug SM A750GN
       designSize: const Size(360, 740),
       minTextAdapt: true,
       splitScreenMode: true,

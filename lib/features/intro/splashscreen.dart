@@ -1,10 +1,13 @@
 import 'dart:math' as math;
+import 'package:expense_tracker/data/firebase/AuthFirestore.dart';
+import 'package:expense_tracker/data/repositories/prefs/UserPrefsService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/widget/Main_bottom_nav.dart';
+import '../../data/model/UserModel.dart';
 import '../auth/screens/LoginScreen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -141,35 +144,38 @@ class _SplashScreenState extends State<SplashScreen>
 
   // ── Hàm duy nhất điều khiển toàn bộ flow ──────────────────────
   Future<void> _runSplash() async {
-    // Bước 1: Delay 600ms cho app khởi động xong hẳn
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
 
-    // Bước 2: Chạy animation entry
     await _entryCtrl.forward();
     if (!mounted) return;
 
-    // Bước 3: Check login ngay sau animation (đồng bộ, không tốn thêm thời gian)
-    final user = FirebaseAuth.instance.currentUser;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final getUserData  = await UserPrefsService.getUser();
 
-    // Bước 4: Dừng 800ms cho user nhìn splash
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
 
-    // Bước 5: Fade out
     await _exitCtrl.forward();
     if (!mounted) return;
 
-    // Bước 6: Navigate 1 lần duy nhất
+    // ✅ Điều kiện rõ ràng: cần CẢ HAI đều tồn tại mới vào HomePage
+    final Widget nextScreen;
+    if (firebaseUser != null && getUserData != null) {
+      nextScreen = MainNavigationScreen(user: getUserData);
+    } else {
+      // Dù lý do gì (chưa login, mất prefs, v.v.) → về Login
+      await FirebaseAuth.instance.signOut(); // đảm bảo clean state
+      nextScreen = const LoginScreen();
+    }
+
     Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-        pageBuilder: (_, __, ___) => user == null
-        ? const LoginScreen()
-        : const MainNavigationScreen(),
-    transitionDuration: Duration.zero,      // ← không transition
-    reverseTransitionDuration: Duration.zero,
-    )
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => nextScreen,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
     );
   }
 
