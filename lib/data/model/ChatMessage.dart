@@ -12,7 +12,7 @@ class ChatMessage {
   final String? note;
   final String? categoryId;
   final String? selectedWalletId; // Ví người dùng chọn
-  final bool showActionCard;    // Cờ để biết có hiện Card hay không
+  final bool showActionCard; // Cờ để biết có hiện Card hay không
 
   ChatMessage({
     required this.id,

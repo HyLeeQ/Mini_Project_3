@@ -8,6 +8,7 @@ import '../../../data/model/CategoryModel.dart';
 import '../../../data/model/TransactionModel.dart';
 import '../HomePage/bloc/transaction_bloc/transaction_state.dart';
 import '../HomePage/bloc/transaction_bloc/transaction_bloc.dart';
+import 'CanvasChartsPage.dart';
 
 // import 'package:your_app/data/model/TransactionModel.dart';
 // import 'package:your_app/data/model/CategoryModel.dart';
@@ -313,6 +314,13 @@ class _AnalyticsPageState extends State<AnalyticsPage>
             ],
           ),
           const Spacer(),
+          IconButton(
+            tooltip: 'Biểu đồ canvas',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => CanvasChartsPage(transactions: listTran, categories: widget.categories),
+            )),
+            icon: const Icon(Icons.show_chart_rounded, color: _gold),
+          ),
           // Year badge
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
