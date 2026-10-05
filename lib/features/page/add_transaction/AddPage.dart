@@ -56,6 +56,11 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   File? _previewImage;
+  XFile? _capturedImage;
+  bool _flashEnabled = false;
+  bool _cameraInitializing = false;
+  String? _cameraError;
+  Offset? _focusPoint;
 
   // ── State ──────────────────────────────────────────────────────
   TransactionType _txType = TransactionType.expense;
@@ -117,11 +122,22 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
   Future<void> _initCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      _cameraController = CameraController(_cameras![0], ResolutionPreset.medium);
-      await _cameraController!.initialize();
-      if (mounted) setState(() {}); // Vẽ lại để hiện camera
+    if (_cameraInitializing) return;
+    _cameraInitializing = true;
+    try {
+      _cameras = await availableCameras();
+      if (_cameras!.isEmpty) throw CameraException('NoCamera', 'Không tìm thấy camera.');
+      final camera = _cameras!.firstWhere((item) => item.lensDirection == CameraLensDirection.back, orElse: () => _cameras!.first);
+      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
+      _cameraController = controller;
+      await controller.initialize();
+      if (mounted) setState(() => _cameraError = null);
+    } on CameraException catch (e) {
+      if (mounted) setState(() => _cameraError = e.description ?? 'Không thể mở camera (${e.code}).');
+    } catch (e) {
+      if (mounted) setState(() => _cameraError = 'Không thể khởi tạo camera: $e');
+    } finally {
+      _cameraInitializing = false;
     }
   }
   @override
@@ -177,7 +193,6 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
 
     try{
       final XFile image = await _cameraController!.takePicture();
-      await processDetailed(image);
       // await Future.delayed(const Duration(seconds: 2));
 
       if (!mounted) return;
@@ -185,6 +200,7 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
       _scanCtrl.stop();
 
       setState(() {
+        _capturedImage = image;
         _isScanning = false;
 
         // _amountCtrl.text = '125.000'; // Số tiền nhận diện được
@@ -202,6 +218,41 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _toggleFlash() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized || _capturedImage != null) return;
+    try {
+      final enabled = !_flashEnabled;
+      await controller.setFlashMode(enabled ? FlashMode.torch : FlashMode.off);
+      if (mounted) setState(() => _flashEnabled = enabled);
+    } on CameraException catch (e) {
+      if (mounted) _snack(e.description ?? 'Thiết bị không hỗ trợ flash.', color: AppColors.red);
+    }
+  }
+
+  Future<void> _focusCamera(TapDownDetails details, Size size) async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized || _capturedImage != null || size.isEmpty) return;
+    final point = Offset((details.localPosition.dx / size.width).clamp(0.0, 1.0), (details.localPosition.dy / size.height).clamp(0.0, 1.0));
+    setState(() => _focusPoint = point);
+    try {
+      await controller.setFocusPoint(point);
+      await controller.setExposurePoint(point);
+    } on CameraException catch (e) {
+      if (mounted) _snack(e.description ?? 'Không thể lấy nét tại vị trí này.', color: AppColors.red);
+    } catch (e) {
+      if (mounted) _snack('Thiết bị không hỗ trợ lấy nét chạm: $e', color: AppColors.red);
+    }
+  }
+
+  void _retakePhoto() => setState(() => _capturedImage = null);
+
+  Future<void> _useCapturedPhoto() async {
+    final image = _capturedImage;
+    if (image == null) return;
+    setState(() => _capturedImage = null);
+    await processDetailed(image);
+  }
   //doc van ban tu hinh anh
   Future<void> processDetailed(XFile image) async {
     if (!mounted) return;
@@ -436,6 +487,14 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
                             },
                           controller: _cameraController,
                           previewImage: _previewImage,
+                          capturedImage: _capturedImage,
+                          cameraError: _cameraError,
+                          focusPoint: _focusPoint,
+                          flashEnabled: _flashEnabled,
+                          onFlashToggle: _toggleFlash,
+                          onFocus: _focusCamera,
+                          onRetake: _retakePhoto,
+                          onUsePhoto: _useCapturedPhoto,
                         ),
                       ),
                     ],

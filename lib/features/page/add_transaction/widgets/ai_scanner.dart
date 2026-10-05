@@ -119,6 +119,14 @@ class AIScannerPanel extends StatelessWidget {
   final VoidCallback? onPickImage;
   final CameraController? controller; // Thêm controller để nhận dữ liệu camera
   final File? previewImage;
+  final XFile? capturedImage;
+  final String? cameraError;
+  final Offset? focusPoint;
+  final bool flashEnabled;
+  final VoidCallback? onFlashToggle;
+  final void Function(TapDownDetails details, Size size)? onFocus;
+  final VoidCallback? onRetake;
+  final VoidCallback? onUsePhoto;
 
   const AIScannerPanel({
     super.key,
@@ -128,6 +136,14 @@ class AIScannerPanel extends StatelessWidget {
     required this.onPickImage,
     this.controller, // Khai báo trong constructor
     this.previewImage,
+    this.capturedImage,
+    this.cameraError,
+    this.focusPoint,
+    this.flashEnabled = false,
+    this.onFlashToggle,
+    this.onFocus,
+    this.onRetake,
+    this.onUsePhoto,
   });
 
   @override
@@ -154,7 +170,9 @@ class AIScannerPanel extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (previewImage != null)
+                    if (capturedImage != null)
+                      Image.file(File(capturedImage!.path), fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                    else if (previewImage != null)
                     // Ưu tiên hiển thị ảnh đã chụp/chọn
                       Image.file(
                         previewImage!,
@@ -170,6 +188,8 @@ class AIScannerPanel extends StatelessWidget {
                           child: CameraPreview(controller!),
                         ),
                       )
+                    else if (cameraError != null)
+                      Center(child: Padding(padding: EdgeInsets.all(16.w), child: Text(cameraError!, textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 12.sp))))
                     else
                       const Center(
                         child: CircularProgressIndicator(color: AppColors.gold),
@@ -219,6 +239,20 @@ class AIScannerPanel extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ),
+                    if (capturedImage == null && controller != null && controller!.value.isInitialized && !isScanning)
+                      Positioned.fill(child: LayoutBuilder(builder: (context, constraints) => GestureDetector(behavior: HitTestBehavior.opaque, onTapDown: (details) => onFocus?.call(details, constraints.biggest), child: const SizedBox.expand()))),
+                    if (capturedImage == null && controller != null && controller!.value.isInitialized)
+                      Positioned(top: 10.h, right: 10.w, child: IconButton.filledTonal(onPressed: onFlashToggle, icon: Icon(flashEnabled ? Icons.flash_on : Icons.flash_off), tooltip: 'Bật/tắt flash')),
+                    if (capturedImage == null && focusPoint != null)
+                      Positioned(
+                        left: focusPoint!.dx * (MediaQuery.sizeOf(context).width - 40.w) - 18.w,
+                        top: focusPoint!.dy * 200.h - 18.h,
+                        child: IgnorePointer(child: Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: BoxDecoration(border: Border.all(color: AppColors.gold, width: 2), borderRadius: BorderRadius.circular(6.r)),
+                        )),
                       ),
 
                     // 4. HƯỚNG DẪN KHI CHƯA SCAN & CAMERA CHƯA SẴN SÀNG
@@ -300,7 +334,16 @@ class AIScannerPanel extends StatelessWidget {
             ),
 
             // --- CÁC NÚT HÀNH ĐỘNG ---
-            Padding(
+            if (capturedImage != null)
+              Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                child: Row(children: [
+                  Expanded(child: _actionBtn(icon: Icons.refresh, label: 'Chụp lại', color: AppColors.blue, onTap: onRetake)),
+                  SizedBox(width: 12.w),
+                  Expanded(child: _actionBtn(icon: Icons.check, label: 'Dùng ảnh này', color: AppColors.gold, onTap: onUsePhoto)),
+                ]),
+              ),
+            if (capturedImage == null) Padding(
               padding: EdgeInsets.all(16.w),
               child: Row(
                 children: [
