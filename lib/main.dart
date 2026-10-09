@@ -84,48 +84,57 @@ class MyApp extends StatelessWidget {
                 designSize: const Size(360, 740),
                 minTextAdapt: true,
                 splitScreenMode: true,
+                useInheritedMediaQuery: true,
                 child: child,
               );
             }
 
             // Trên máy tính / Desktop Web: Hiển thị khung điện thoại chuẩn đẹp mắt
             const phoneWidth = 390.0;
-            final phoneHeight = (820.0).clamp(0.0, constraints.maxHeight - 32.0);
+            final phoneHeight = (constraints.maxHeight - 40.0).clamp(600.0, 844.0);
 
             return Container(
               color: const Color(0xFF07070D),
-              child: Center(
-                child: Container(
-                  width: phoneWidth,
-                  height: phoneHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(38),
-                    border: Border.all(color: const Color(0xFF282E40), width: 3.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.7),
-                        blurRadius: 40,
-                        spreadRadius: 8,
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFFD4A843).withOpacity(0.08),
-                        blurRadius: 60,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(34.5),
-                    child: MediaQuery(
-                      data: MediaQuery.of(context).copyWith(
-                        size: Size(phoneWidth, phoneHeight),
-                      ),
-                      child: ScreenUtilInit(
-                        designSize: const Size(360, 740),
-                        minTextAdapt: true,
-                        splitScreenMode: true,
-                        child: child,
-                      ),
+              alignment: Alignment.center,
+              child: Container(
+                width: phoneWidth,
+                height: phoneHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(38),
+                  border: Border.all(color: const Color(0xFF282E40), width: 3.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.7),
+                      blurRadius: 40,
+                      spreadRadius: 8,
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFFD4A843).withOpacity(0.08),
+                      blurRadius: 60,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(34.5),
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                      size: Size(phoneWidth, phoneHeight),
+                    ),
+                    child: ScreenUtilInit(
+                      designSize: const Size(360, 740),
+                      minTextAdapt: true,
+                      splitScreenMode: true,
+                      useInheritedMediaQuery: true,
+                      builder: (innerCtx, _) {
+                        ScreenUtil.init(
+                          innerCtx,
+                          designSize: const Size(360, 740),
+                          minTextAdapt: true,
+                          splitScreenMode: true,
+                        );
+                        return child;
+                      },
                     ),
                   ),
                 ),
