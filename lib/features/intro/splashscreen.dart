@@ -144,39 +144,56 @@ class _SplashScreenState extends State<SplashScreen>
 
   // ── Hàm duy nhất điều khiển toàn bộ flow ──────────────────────
   Future<void> _runSplash() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
+    try {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
 
-    await _entryCtrl.forward();
-    if (!mounted) return;
+      await _entryCtrl.forward();
+      if (!mounted) return;
 
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    final getUserData  = await UserPrefsService.getUser();
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      final getUserData  = await UserPrefsService.getUser();
 
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted) return;
 
-    await _exitCtrl.forward();
-    if (!mounted) return;
+      await _exitCtrl.forward();
+      if (!mounted) return;
 
-    // ✅ Điều kiện rõ ràng: cần CẢ HAI đều tồn tại mới vào HomePage
-    final Widget nextScreen;
-    if (firebaseUser != null && getUserData != null) {
-      nextScreen = MainNavigationScreen(user: getUserData);
-    } else {
-      // Dù lý do gì (chưa login, mất prefs, v.v.) → về Login
-      await FirebaseAuth.instance.signOut(); // đảm bảo clean state
-      nextScreen = const LoginScreen();
+      // ✅ Điều kiện rõ ràng: cần CẢ HAI đều tồn tại mới vào HomePage
+      final Widget nextScreen;
+      if (firebaseUser != null && getUserData != null) {
+        nextScreen = MainNavigationScreen(user: getUserData);
+      } else {
+        // Dù lý do gì (chưa login, mất prefs, v.v.) → về Login
+        try {
+          await FirebaseAuth.instance.signOut(); // đảm bảo clean state
+        } catch (_) {}
+        nextScreen = const LoginScreen();
+      }
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => nextScreen,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Splash error: $e');
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const LoginScreen(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+      }
     }
-
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => nextScreen,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-      ),
-    );
   }
 
   @override
