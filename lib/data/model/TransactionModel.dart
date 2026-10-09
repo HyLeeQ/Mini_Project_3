@@ -7,6 +7,7 @@ class TransactionModel {
   final String walletId;
   final double amount;
   final TransactionType type;
+  final String? note;
   final String? merchantName;
   final String? receiptImagePath;
   final DateTime date;
