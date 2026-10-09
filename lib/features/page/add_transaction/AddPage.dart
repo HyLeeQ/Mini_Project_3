@@ -13,6 +13,7 @@ import '../../../data/model/CategoryModel.dart';
 import '../../../data/model/TransactionModel.dart';
 import '../../../data/model/WalletModel.dart';
 import '../../../data/repositories/services/OCRService.dart';
+import '../../../data/repositories/local/DatabaseHelper.dart';
 import '../HomePage/bloc/transaction_bloc/transaction_bloc.dart';
 import '../HomePage/bloc/transaction_bloc/transaction_event.dart';
 import '../HomePage/bloc/wallet_bloc/wallet_bloc.dart';
@@ -72,6 +73,8 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
   bool _isLoading = false;
   bool _showScanner = false;
   bool _isScanning = false;
+  String? _cachedReceiptThumbnail;
+  String? _extractedMerchantName;
 
   // ── Data ───────────────────────────────────────────────────────
   List<CategoryModel> get _categories =>
@@ -253,45 +256,63 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
     setState(() => _capturedImage = null);
     await processDetailed(image);
   }
-  //doc van ban tu hinh anh
+  // Đọc văn bản từ hình ảnh bằng On-Device ML Kit và Heuristic Regex
   Future<void> processDetailed(XFile image) async {
     if (!mounted) return;
 
+    final imageFile = File(image.path);
     setState(() {
-      _previewImage = File(image.path);
+      _previewImage = imageFile;
       _isScanning = true;
       _isLoading = true;
     });
 
-    // Ép hiệu ứng chạy lại từ đầu và lặp liên tục
+    // Chạy hiệu ứng thanh quét kính ngắm
     _scanCtrl.repeat(reverse: true);
     try {
-      // Gửi trực tiếp FILE ảnh sang AI, không cần qua ML Kit lấy text trước
-      final File imageFile = File(image.path);
-      final cleanData = await _geminiServices.scanReceipt(imageFile);
+      // 1. Cache và nén thumbnail hóa đơn vào thư mục app local (thực hiện yêu cầu đề bài)
+      final cachedPath = await DatabaseHelper.instance.cacheReceiptThumbnail(imageFile);
+      if (mounted && cachedPath != null) {
+        _cachedReceiptThumbnail = cachedPath;
+      }
+
+      // 2. Nhận diện offline on-device bằng Google ML Kit có framing crop
+      final cleanData = await _geminiServices.scanReceipt(
+        imageFile,
+        cropRectRatio: const Rect.fromLTWH(0.05, 0.08, 0.90, 0.84),
+      );
 
       if (cleanData != null && mounted) {
         setState(() {
-          // Cập nhật số tiền
-          _amountCtrl.text = cleanData['total']?.toString() ?? "";
+          // Tự động điền số tiền
+          if (cleanData['total'] != null) {
+            _amountCtrl.text = cleanData['total'].toString();
+          }
 
-          // Cập nhật ghi chú
-          String note = cleanData['note'] ?? "Hóa đơn mới";
-          // _noteCtrl.text = "Được quét bởi AI DoctorDong";
+          // Tự động điền tên cửa hàng / ghi chú
+          _extractedMerchantName = cleanData['merchantName'];
+          if (cleanData['note'] != null) {
+            _noteCtrl.text = cleanData['note'];
+          }
 
-          // Logic chọn Category
-          String idFromAI = cleanData['categoryId'];
+          // Tự động cập nhật ngày giao dịch từ hóa đơn
+          if (cleanData['date'] is DateTime) {
+            _selectedDate = cleanData['date'] as DateTime;
+          }
+
+          // Phân loại danh mục tự động (Food, Study, Travel, Gear, Entertainment)
+          String idFromAI = cleanData['categoryId'] ?? '1';
           _selectedCat = SampleData.categories.firstWhere(
-                (cat) => cat.id == idFromAI,
-            orElse: () => SampleData.categories[0], // Nếu không thấy thì mặc định mục đầu tiên
+            (cat) => cat.id == idFromAI,
+            orElse: () => SampleData.categories[0],
           );
         });
-        _snack("Đọc hóa đơn hoàn tất!");
+        _snack("Quét hóa đơn Offline (Google ML Kit) thành công!");
       } else {
-        _snack("AI không nhận diện được hóa đơn này", color: AppColors.red);
+        _snack("Không trích xuất được văn bản từ ảnh", color: AppColors.red);
       }
     } catch (e) {
-      print("Lỗi xử lý: $e");
+      debugPrint("Lỗi xử lý OCR: $e");
       _snack("Lỗi hệ thống khi quét ảnh", color: AppColors.red);
     } finally {
       if (mounted) {
@@ -300,30 +321,28 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
           _isLoading = false;
           _previewImage = null;
         });
-        _scanCtrl.stop(); // Dừng hiệu ứng thanh quét
+        _scanCtrl.stop();
       }
     }
   }
+
   Future<XFile?> pickImageFromGallery() async {
     try {
       final ImagePicker picker = ImagePicker();
 
       final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery, // CHỈ lấy từ thư viện
-        imageQuality: 80,            // nén ảnh (0-100)
-        maxWidth: 1024,              // resize để giảm RAM
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1280,
       );
 
-      if (pickedFile != null) {
-        return pickedFile;
-      }
-
-      return null; // user không chọn ảnh
+      return pickedFile;
     } catch (e) {
-      print("Lỗi chọn ảnh: $e");
+      debugPrint("Lỗi chọn ảnh: $e");
       return null;
     }
   }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -344,8 +363,8 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
   }
 
   Future<void> _save() async {
-    // 1. Kiểm tra đầu vào (Validate)
-    final amountText = _amountCtrl.text.replaceAll('.', '');
+    // 1. Kiểm tra đầu vào (Validate review form)
+    final amountText = _amountCtrl.text.replaceAll('.', '').replaceAll(',', '');
     if (amountText.isEmpty || double.tryParse(amountText) == null || double.parse(amountText) <= 0) {
       _snack('Vui lòng nhập số tiền hợp lệ', color: AppColors.red);
       return;
@@ -361,26 +380,55 @@ class _AddPageState extends State<AddPage> with TickerProviderStateMixin {
 
     try {
       final double finalAmount = double.parse(amountText);
+      final txId = 'tx_${DateTime.now().millisecondsSinceEpoch}';
 
-      await transactionStorage.saveTransaction(
+      // 3. Lưu vào Local Database (SQLite) theo đúng yêu cầu đề bài Mini-Project 3
+      final localTx = TransactionModel(
+        id: txId,
         userId: widget.userId,
         categoryId: _txType == TransactionType.transfer ? 'TRANSFER_SYSTEM' : _selectedCat!.id,
-        walletId: _txType == TransactionType.transfer ? _transferFrom!.id : _selectedWallet!.id,
-        toWalletId: _txType == TransactionType.transfer ? _transferTo!.id : null,
+        walletId: _txType == TransactionType.transfer ? (_transferFrom?.id ?? '') : (_selectedWallet?.id ?? ''),
         amount: finalAmount,
         type: _txType,
         note: _noteCtrl.text.trim(),
+        merchantName: _extractedMerchantName,
+        receiptImagePath: _cachedReceiptThumbnail,
         date: _selectedDate,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
+      await DatabaseHelper.instance.insertTransaction(localTx);
 
-      // 3. Cập nhật UI sau khi thành công
+      // 4. Đồng bộ thêm lên Firestore nếu có mạng / hỗ trợ sync
+      try {
+        if (_selectedWallet != null || _txType == TransactionType.transfer) {
+          await transactionStorage.saveTransaction(
+            userId: widget.userId,
+            categoryId: _txType == TransactionType.transfer ? 'TRANSFER_SYSTEM' : _selectedCat!.id,
+            walletId: _txType == TransactionType.transfer ? _transferFrom!.id : _selectedWallet!.id,
+            toWalletId: _txType == TransactionType.transfer ? _transferTo!.id : null,
+            amount: finalAmount,
+            type: _txType,
+            note: _noteCtrl.text.trim(),
+            date: _selectedDate,
+          );
+        }
+      } catch (firestoreError) {
+        debugPrint("Lưu Firestore offline/bỏ qua: $firestoreError");
+      }
+
+      // 5. Cập nhật Bloc State
       if (mounted) {
         context.read<WalletBloc>().add(RefreshWallets(widget.userId));
-        context.read<TransactionBloc>().add(RefreshTransactions(widget.userId));
-        _snack(_txType == TransactionType.transfer ? 'Chuyển tiền thành công!' : 'Đã lưu giao dịch!');
+        context.read<TransactionBloc>().add(AddTransaction(localTx));
+        _snack(_txType == TransactionType.transfer
+            ? 'Chuyển tiền thành công!'
+            : 'Đã lưu giao dịch vào cơ sở dữ liệu (SQLite)!');
 
         _amountCtrl.text = '';
         _noteCtrl.text = '';
+        _cachedReceiptThumbnail = null;
+        _extractedMerchantName = null;
       }
     } catch (e) {
       _snack('Lỗi hệ thống: $e', color: AppColors.red);

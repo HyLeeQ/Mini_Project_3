@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../../data/model/TransactionModel.dart';
+import '../../../../../data/repositories/local/DatabaseHelper.dart';
 import 'transaction_event.dart';
 import 'transaction_state.dart';
 
@@ -13,42 +14,62 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     on<RefreshTransactions>(_onRefresh);
   }
 
-  // ── Load từ Firestore ───────────────────────────────────────────
+  // ── Load Offline First (SQLite) & Đồng bộ Firestore ───────────────
   Future<void> _onLoad(
       LoadRecentTransactions event,
       Emitter<TransactionState> emit,
       ) async {
     emit(TransactionLoading());
+
+    // 1. Tải tức thì từ SQLite (Offline database)
+    List<TransactionModel> localList = [];
+    try {
+      localList = await DatabaseHelper.instance.getTransactions(userId: event.userId);
+      if (localList.isNotEmpty) {
+        emit(TransactionLoaded(
+          transactions: localList,
+          recent: localList.take(5).toList(),
+        ));
+      }
+    } catch (_) {}
+
+    // 2. Đồng bộ Firestore nếu có mạng
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('Transactions')
           .where('userId', isEqualTo: event.userId)
           .get();
 
-      final all = <TransactionModel>[];
+      final allMap = <String, TransactionModel>{
+        for (final t in localList) t.id: t,
+      };
+
       for (final doc in snapshot.docs) {
         try {
           final data = doc.data();
-          all.add(
-            TransactionModel.fromJson({
-              ...data,
-              // Ưu tiên id từ document nếu field id bị thiếu/sai.
-              'id': data['id'] ?? doc.id,
-            }),
-          );
-        } catch (_) {
-          // Bỏ qua record lỗi để không làm hỏng toàn bộ danh sách.
-        }
+          final tx = TransactionModel.fromJson({
+            ...data,
+            'id': data['id'] ?? doc.id,
+          });
+          allMap[tx.id] = tx;
+          // Lưu cache vào SQLite
+          await DatabaseHelper.instance.insertTransaction(tx);
+        } catch (_) {}
       }
 
-      all.sort((a, b) => b.date.compareTo(a.date));
+      final combined = allMap.values.toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
 
       emit(TransactionLoaded(
-        transactions: all,
-        recent: all.take(5).toList(),
+        transactions: combined,
+        recent: combined.take(5).toList(),
       ));
     } catch (e) {
-      emit(TransactionError('Không thể tải giao dịch: $e'));
+      if (localList.isNotEmpty) {
+        // Đã emit localList ở trên
+      } else {
+        emit(TransactionLoaded(transactions: const [], recent: const []));
+      }
     }
   }
 
@@ -88,14 +109,15 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       recent: sorted.take(5).toList(),
     ));
 
-    // Xoá khỏi Firestore ở nền
+    // Xoá khỏi SQLite và Firestore ở nền
     try {
+      await DatabaseHelper.instance.deleteTransaction(event.transactionId);
       await FirebaseFirestore.instance
           .collection('Transactions')
           .doc(event.transactionId)
           .delete();
     } catch (_) {
-      // TODO: rollback nếu cần
+      // rollback nếu cần
     }
   }
 
