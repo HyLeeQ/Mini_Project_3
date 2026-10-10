@@ -120,21 +120,14 @@ class MyApp extends StatelessWidget {
                   child: MediaQuery(
                     data: MediaQuery.of(context).copyWith(
                       size: Size(phoneWidth, phoneHeight),
+                      textScaler: TextScaler.noScaling,
                     ),
                     child: ScreenUtilInit(
                       designSize: const Size(360, 740),
                       minTextAdapt: true,
-                      splitScreenMode: true,
+                      splitScreenMode: false,
                       useInheritedMediaQuery: true,
-                      builder: (innerCtx, _) {
-                        ScreenUtil.init(
-                          innerCtx,
-                          designSize: const Size(360, 740),
-                          minTextAdapt: true,
-                          splitScreenMode: true,
-                        );
-                        return child;
-                      },
+                      child: child,
                     ),
                   ),
                 ),
