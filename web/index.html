@@ -4,12 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="DoctorĐồng - Trải nghiệm Demo App Quản Lý Tài Chính & OCR Quét Hoá Đơn">
+  <meta name="description" content="DoctorĐồng - Trải nghiệm Demo App Quản Lý Tài Chính & OCR Quét Hoá Đơn Thông Minh">
   
-  <title>DoctorĐồng - Expense Tracker</title>
+  <title>DoctorĐồng - AI & OCR Expense Tracker (Live Demo)</title>
   <link rel="icon" type="image/png" href="favicon.png"/>
   
   <style>
+    :root {
+      --bg-dark: #07070D;
+      --card-bg: rgba(16, 20, 31, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --gold-primary: #D4A843;
+      --gold-glow: rgba(212, 168, 67, 0.25);
+      --text-main: #FFFFFF;
+      --text-muted: #94A3B8;
+      --phone-w: 393px;
+      --phone-h: 852px;
+      --phone-radius: 48px;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -19,94 +32,361 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      background-color: #07070D;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      overflow-x: hidden;
+      background-color: var(--bg-dark);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
     }
 
-    /* Ambient background lighting */
-    .ambient-bg {
+    /* Ambient decorative lighting */
+    .ambient-mesh {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
       background: 
-        radial-gradient(circle at 50% 20%, rgba(212, 168, 67, 0.08) 0%, transparent 60%),
-        radial-gradient(circle at 50% 80%, rgba(40, 46, 64, 0.25) 0%, transparent 70%),
-        #07070D;
+        radial-gradient(circle at 18% 25%, rgba(212, 168, 67, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 82% 70%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, transparent 70%);
     }
 
-    /* Header action */
-    .top-bar {
+    .grid-pattern {
       position: fixed;
-      top: 16px;
-      right: 20px;
-      z-index: 1000;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 80%);
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 80%);
+    }
+
+    /* Top Navigation */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 68px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: rgba(7, 7, 13, 0.75);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand {
       display: flex;
       align-items: center;
       gap: 12px;
+      text-decoration: none;
+      color: #fff;
     }
 
-    .apk-download-btn {
-      background: linear-gradient(135deg, #1e2230 0%, #111420 100%);
-      color: #e2e8f0;
-      border: 1px solid rgba(212, 168, 67, 0.25);
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #D4A843 0%, #8E6B1D 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 18px;
+      color: #07070D;
+      box-shadow: 0 0 20px rgba(212, 168, 67, 0.3);
+    }
+
+    .brand-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      background: rgba(212, 168, 67, 0.15);
+      color: var(--gold-primary);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid rgba(212, 168, 67, 0.3);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Device Switcher Pills */
+    .device-switcher {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .device-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .device-btn:hover {
+      color: #fff;
+    }
+
+    .device-btn.active {
+      background: #1e2538;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .apk-btn {
+      background: linear-gradient(135deg, #1f273d 0%, #111422 100%);
+      color: #f1f5f9;
+      border: 1px solid rgba(212, 168, 67, 0.35);
       padding: 9px 18px;
       border-radius: 9999px;
       font-size: 13px;
       font-weight: 600;
       text-decoration: none;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(212, 168, 67, 0.1);
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(212, 168, 67, 0.1);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      backdrop-filter: blur(8px);
     }
 
-    .apk-download-btn svg {
-      color: #d4a843;
+    .apk-btn svg {
+      color: var(--gold-primary);
     }
 
-    .apk-download-btn:hover {
+    .apk-btn:hover {
       transform: translateY(-2px);
-      border-color: rgba(212, 168, 67, 0.6);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 168, 67, 0.2);
-      color: #ffffff;
+      border-color: var(--gold-primary);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px var(--gold-glow);
+      color: #fff;
     }
 
-    /* Phone frame container */
-    .phone-stage {
+    /* Main Showcase Stage */
+    .showcase-container {
       position: relative;
       z-index: 10;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      height: 100%;
+      padding: 90px 48px 40px;
+      gap: 60px;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Left Info Panel */
+    .info-panel {
+      flex: 1;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(212, 168, 67, 0.1);
+      border: 1px solid rgba(212, 168, 67, 0.25);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold-primary);
+      width: fit-content;
+    }
+
+    .hero-tag span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 10px #10B981;
+    }
+
+    .hero-title {
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -1px;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #ffffff 40%, #D4A843 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    /* Features Grid */
+    .features-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(212, 168, 67, 0.3);
+      transform: translateX(4px);
+      background: rgba(22, 28, 44, 0.7);
+    }
+
+    .feature-icon-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(212, 168, 67, 0.12);
+      border: 1px solid rgba(212, 168, 67, 0.25);
+      color: var(--gold-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-content h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 2px;
+    }
+
+    .feature-content p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* QR Code Card */
+    .qr-card {
+      background: linear-gradient(135deg, rgba(20, 26, 40, 0.8) 0%, rgba(12, 15, 24, 0.9) 100%);
+      border: 1px solid rgba(212, 168, 67, 0.2);
+      border-radius: 18px;
       padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(14px);
+    }
+
+    .qr-image {
+      width: 84px;
+      height: 84px;
+      border-radius: 10px;
+      background: #0E1118;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px;
+    }
+
+    .qr-info h5 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qr-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .live-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* Center / Right Phone Device Stage */
+    .phone-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .phone-device-wrap {
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .phone-mockup {
       position: relative;
-      width: 393px;
-      height: 852px;
-      max-height: calc(100vh - 32px);
+      width: var(--phone-w);
+      height: var(--phone-h);
+      max-height: calc(100vh - 120px);
       aspect-ratio: 393 / 852;
       background: #000000;
-      border-radius: 50px;
+      border-radius: var(--phone-radius);
       border: 4px solid #282E40;
       box-shadow: 
         0 0 0 2px #12141c,
-        0 25px 60px -10px rgba(0, 0, 0, 0.8),
-        0 0 50px rgba(212, 168, 67, 0.08);
+        0 30px 80px -15px rgba(0, 0, 0, 0.9),
+        0 0 60px rgba(212, 168, 67, 0.12);
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease;
     }
 
     /* Dynamic Island */
@@ -125,6 +405,7 @@
       align-items: center;
       justify-content: flex-end;
       padding-right: 12px;
+      transition: all 0.3s ease;
     }
 
     .dynamic-island::after {
@@ -136,6 +417,21 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
+    /* Android punch hole mode */
+    .phone-mockup.mode-android .dynamic-island {
+      width: 14px;
+      height: 14px;
+      top: 14px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+      background: #000;
+    }
+    .phone-mockup.mode-android .dynamic-island::after {
+      width: 8px;
+      height: 8px;
+    }
+
     /* App iframe */
     .app-frame {
       width: 100%;
@@ -145,62 +441,240 @@
       background-color: #07070D;
     }
 
-    /* Mobile screens (Real phones or small viewports <= 500px) */
+    /* Reload / Action hint below phone */
+    .phone-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .phone-action-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .phone-action-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1100px) {
+      .showcase-container {
+        flex-direction: column;
+        padding-top: 80px;
+        gap: 40px;
+      }
+      .info-panel {
+        max-width: 600px;
+        text-align: center;
+        align-items: center;
+      }
+      .hero-tag {
+        margin: 0 auto;
+      }
+      .qr-card {
+        max-width: 440px;
+        width: 100%;
+        text-align: left;
+      }
+    }
+
+    /* Mobile screens (Real phones or browser <= 500px) */
     @media (max-width: 500px) {
-      .ambient-bg {
-        display: none;
+      .ambient-mesh, .grid-pattern, .navbar, .info-panel, .phone-controls {
+        display: none !important;
+      }
+
+      .showcase-container {
+        padding: 0;
+        margin: 0;
+        min-height: 100vh;
+        width: 100vw;
+        height: 100vh;
       }
 
       .phone-stage {
-        padding: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .phone-device-wrap {
+        width: 100%;
+        height: 100%;
       }
 
       .phone-mockup {
-        width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
-        border: none;
-        box-shadow: none;
-        aspect-ratio: auto;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        aspect-ratio: auto !important;
       }
 
       .dynamic-island {
-        display: none;
-      }
-
-      .top-bar {
-        top: 10px;
-        right: 10px;
-        opacity: 0.85;
-      }
-
-      .apk-download-btn {
-        padding: 6px 12px;
-        font-size: 11px;
+        display: none !important;
       }
     }
   </style>
 </head>
 <body>
-  <div class="ambient-bg"></div>
+  <div class="ambient-mesh"></div>
+  <div class="grid-pattern"></div>
 
-  <div class="top-bar">
-    <a href="https://github.com/HyLeeQ/Mini_Project_3/releases/download/v1.0.0/expense-tracker-arm64.apk" download="expense-tracker-arm64.apk" class="apk-download-btn">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Tải APK (34 MB)
+  <!-- Navigation bar -->
+  <header class="navbar">
+    <a href="#" class="brand">
+      <div class="brand-logo">Đ</div>
+      <div class="brand-name">DoctorĐồng</div>
+      <div class="brand-badge">Demo v1.0</div>
     </a>
-  </div>
 
-  <div class="phone-stage">
-    <div class="phone-mockup">
-      <div class="dynamic-island"></div>
-      <iframe class="app-frame" src="app.html" title="DoctorĐồng Expense Tracker"></iframe>
+    <div class="nav-actions">
+      <!-- Device frame switcher -->
+      <div class="device-switcher">
+        <button class="device-btn active" onclick="switchDevice('iphone', 393, 852, 48, false)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="4"/><path d="M12 18h.01"/></svg>
+          iPhone 16
+        </button>
+        <button class="device-btn" onclick="switchDevice('android', 390, 844, 40, true)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2"/><circle cx="12" cy="5" r="1"/></svg>
+          Pixel 8
+        </button>
+        <button class="device-btn" onclick="switchDevice('compact', 360, 740, 32, false)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="12" height="18" x="6" y="3" rx="2"/></svg>
+          Compact
+        </button>
+      </div>
+
+      <!-- Download APK -->
+      <a href="https://github.com/HyLeeQ/Mini_Project_3/releases/download/v1.0.0/expense-tracker-arm64.apk" download="expense-tracker-arm64.apk" class="apk-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Tải APK (34 MB)
+      </a>
     </div>
-  </div>
+  </header>
+
+  <!-- Main Showcase Container -->
+  <main class="showcase-container">
+    <!-- Left Hero & Features -->
+    <section class="info-panel">
+      <div class="hero-tag">
+        <span></span> Trải Nghiệm Ứng Dụng Thực Tế
+      </div>
+
+      <h1 class="hero-title">
+        Quản Lý Tài Chính & <br/>
+        <span class="gradient-text">OCR Quét Hoá Đơn</span>
+      </h1>
+
+      <p class="hero-desc">
+        Hệ sinh thái theo dõi chi tiêu cá nhân thông minh với công nghệ trích xuất hoá đơn tự động qua Camera AI, phân loại ví tiền và biểu đồ canvas trực quan.
+      </p>
+
+      <!-- Features Cards -->
+      <div class="features-list">
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><line x1="12" x2="12" y1="3" y2="7"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          </div>
+          <div class="feature-content">
+            <h4>Nhận Diện Hoá Đơn OCR</h4>
+            <p>Tự động đọc số tiền, ngày giờ và nhà bán hàng từ hình ảnh hoá đơn bằng AI.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          </div>
+          <div class="feature-content">
+            <h4>Báo Cáo Biểu Đồ Trực Quan</h4>
+            <p>Biểu đồ phân tích thu chi chuyên sâu theo tuần, tháng và danh mục.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+          </div>
+          <div class="feature-content">
+            <h4>Đa Ví Tiền & Bảo Mật Cao</h4>
+            <p>Quản lý nhiều tài khoản ngân hàng, ví điện tử với mã hoá an toàn.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Mobile Experience -->
+      <div class="qr-card">
+        <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=D4A843&bgcolor=0E1118&data=https://mini-project-3.lehuy3646.workers.dev/" alt="Mã QR mở trên điện thoại" loading="lazy">
+        <div class="qr-info">
+          <h5><span class="live-dot"></span> Quét mã mở trên di động</h5>
+          <p>Mở camera điện thoại để quét và trải nghiệm ứng dụng với tỉ lệ màn hình nguyên bản.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Phone Device Frame -->
+    <section class="phone-stage">
+      <div class="phone-device-wrap">
+        <div id="phoneMockup" class="phone-mockup">
+          <div id="dynamicIsland" class="dynamic-island"></div>
+          <iframe id="appFrame" class="app-frame" src="app.html" title="DoctorĐồng App Demo"></iframe>
+        </div>
+      </div>
+
+      <div class="phone-controls">
+        <button class="phone-action-btn" onclick="reloadFrame()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+          Tải lại ứng dụng
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function switchDevice(type, width, height, radius, isAndroid) {
+      const mockup = document.getElementById('phoneMockup');
+      const buttons = document.querySelectorAll('.device-btn');
+      
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      mockup.style.width = width + 'px';
+      mockup.style.height = height + 'px';
+      mockup.style.borderRadius = radius + 'px';
+
+      if (isAndroid) {
+        mockup.classList.add('mode-android');
+      } else {
+        mockup.classList.remove('mode-android');
+      }
+    }
+
+    function reloadFrame() {
+      const iframe = document.getElementById('appFrame');
+      if (iframe) {
+        iframe.src = iframe.src;
+      }
+    }
+  </script>
 </body>
 </html>
